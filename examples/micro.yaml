@@ -1,0 +1,167 @@
+# Copy this file to start a custom font. Keys are decimal Unicode code points.
+# A small sample repertoire, not a full alphabet. See examples/README.md.
+format_version: 1
+font:
+  id: micro
+  name: Micro example
+  author: Kody Brown
+  license: MIT
+  description: Three-row ASCII sample with glyph-aware underlines and a Unicode example.
+metrics:
+  height: 3
+  baseline: 1
+  spacing: 1
+  space_width: 2
+decorations:
+  border:
+    top: '-'
+    bottom: '='
+    height: 1
+    endcaps:
+      left:
+        top: ['|']
+        middle: '|'
+        bottom: ['|']
+      right:
+        top: ['|']
+        middle: '|'
+        bottom: ['|']
+  underline:
+    row: 2
+    char: '_'
+glyphs:
+  default:
+    rows: ['?', '?', ' ']
+  32: # SPACE
+    rows: ['  ', '  ', '  ']
+  33: # !
+    rows: ['!', '!', '.']
+  44: # ,
+    rows: [' ', ' ', ',']
+  45: # -
+    rows: ['   ', '---', '   ']
+  46: # .
+    rows: [' ', ' ', '.']
+  47: # /
+    rows: ['  /', ' / ', '/  ']
+  48: # 0
+    rows: [' _ ', '| |', '|_|']
+  49: # 1
+    rows: [' /|', '  |', ' _|']
+  50: # 2
+    rows: [' _ ', ' _|', '|_ ']
+  51: # 3
+    rows: ['__ ', ' _|', '__|']
+  52: # 4
+    rows: ['| |', '|_|', '  |']
+  53: # 5
+    rows: [' __', '|_ ', ' _|']
+  54: # 6
+    rows: [' _ ', '|_ ', '|_|']
+  55: # 7
+    rows: ['___', '  /', ' / ']
+  56: # 8
+    rows: [' _ ', '|_|', '|_|']
+  57: # 9
+    rows: [' _ ', '|_|', ' _|']
+  58: # :
+    rows: ['.', ' ', '.']
+  63: # ?
+    rows: [' _ ', '  /', ' . ']
+  65: # A
+    rows: [' /\ ', '/__\', '|  |']
+    underline:
+      rows:
+        2: '|__|'
+  66: # B
+    rows:
+      - '|-\'
+      - '|-<'
+      - '|_/'
+  67: # C
+    rows: [' /-', '|  ', ' \-']
+  69: # E
+    rows: ['|--', '|- ', '|__']
+  71: # G
+    rows:
+      - '/-\'
+      - '| _'
+      - '\_|'
+  73: # I
+    rows:
+      - '-|-'
+      - ' | '
+      - '_|_'
+  77: # M
+    rows: ['|\ /|', '| V |', '|   |']
+  84: # T
+    rows: ['---', ' | ', ' | ']
+  87: # W
+    rows: ['|   |', '| | |', ' V V ']
+  88: # X
+    rows: ['\ /', ' X ', '/ \']
+  89: # Y
+    rows: ['\ /', ' Y ', ' | ']
+  90: # Z
+    rows: ['--/', ' / ', '/--']
+  95: # _
+    rows: ['   ', '   ', '___']
+  97: # a
+    rows: [' _ ', '(_|', '   ']
+  98: # b
+    rows:
+      - '| '
+      - '|_'
+      - '|_)'
+  99: # c
+    rows: [' _ ', '(_ ', '   ']
+  101: # e
+    rows:
+      - ' _ '
+      - '|-|'
+      - '\__'
+  103: # g
+    rows:
+      - ' _ '
+      - '|_|'
+      - ' _|'
+    underline:
+      rows:
+        2: '__|'
+  105: # i
+    rows:
+      - ' '
+      - '.'
+      - '|'
+  106: # j
+    rows: [' .', ' |', '_|']
+  109: # m
+    rows: [' _ _ ', '| | |', '     ']
+  112: # p
+    rows: [' _ ', '|_)', '|  ']
+    underline:
+      rows:
+        2: '|__'
+  113: # q
+    rows: [' _ ', '(_|', '  |']
+    underline:
+      rows:
+        2: '__|'
+  116: # t
+    rows:
+      - ' | '
+      - '-|-'
+      - ' |_'
+  119: # w
+    rows: ['     ', '| | |', ' V V ']
+  120: # x
+    rows:
+      - '   '
+      - '\/'
+      - '/\'
+  121: # y
+    rows: ['   ', '\_/', ' _/']
+  122: # z
+    rows: ['__', ' /', '/_']
+  128512: # 😀
+    rows: ['  ', '😀', '  ']

@@ -1,0 +1,7 @@
+
+# Specifies where to dump the target directory
+.cargo/config.toml
+
+# Cargo build output
+debug
+target

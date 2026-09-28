@@ -1,0 +1,20 @@
+format_version: 1
+font: {id: caps, name: Endcap test font}
+metrics: {height: 5, baseline: 3, spacing: 1}
+decorations:
+  border:
+    top: '-'
+    bottom: '='
+    height: 1
+    endcaps:
+      left:
+        top: [' t', 't ']
+        middle: 'l '
+        bottom: ['b ', ' b']
+      right:
+        top: ['T  ', ' T ']
+        middle: '  r'
+        bottom: [' B ', 'B  ']
+glyphs:
+  default:
+    rows: ['a', 'b', 'C', 'd', 'e']
