@@ -155,3 +155,11 @@ Each glyph supplies its font's default border characters. Internal spacers inher
 - Font file size: 4 MiB. Each text file/stdin input: 16 MiB. Rendered input: 100,000 scalar values including expanded tabs and line breaks. Output: 64 MiB total and approximately 1 MiB per row, including color escapes.
 
 These limits turn malformed or excessive input into diagnostics instead of silent truncation. Files contain only data; external paths, imports, expressions, and scripts have no role in the schema.
+
+### Endcaps with combined lines
+
+With `--combine-borders`, endcap corner bands surround the entire block and the
+middle artwork spans its interior, including interline gaps. Top-only and
+bottom-only modes still omit the middle artwork. Each logical line keeps its own
+font height and baseline; corner space is reserved around the whole block.
+No additional font metadata is needed.

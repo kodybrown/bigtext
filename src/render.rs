@@ -73,6 +73,7 @@ pub struct Options {
     pub top_char: Option<String>,
     pub bottom_char: Option<String>,
     pub endcaps: bool,
+    pub combine_borders: bool,
     pub left_endcap_char: Option<String>,
     pub right_endcap_char: Option<String>,
     pub border_height: Option<usize>,
@@ -90,6 +91,7 @@ impl Default for Options {
             top_char: None,
             bottom_char: None,
             endcaps: false,
+            combine_borders: false,
             left_endcap_char: None,
             right_endcap_char: None,
             border_height: None,
@@ -114,6 +116,19 @@ struct Unit {
 struct LogicalLine {
     units: Vec<Unit>,
     empty_style: Style,
+}
+impl LogicalLine {
+    fn last_style(&self) -> &Style {
+        self.units.last().map_or(&self.empty_style, |u| &u.style)
+    }
+}
+
+struct RenderedLine {
+    rows: Vec<String>,
+    // Terminal columns tracked during composition, excluding ANSI sequences.
+    width: usize,
+    top_height: usize,
+    bottom_height: usize,
 }
 
 // The renderer returns data. It never reads a terminal, changes global color,
@@ -203,13 +218,19 @@ pub fn render(spans: &[Span], options: &Options, color_enabled: bool) -> Result<
     }
     let mut output = Vec::new();
     let mut bytes = 0usize;
+    if options.combine_borders && (options.top || options.bottom) && logical.len() > 1 {
+        for row in render_block(&logical, options, color_enabled)? {
+            push_row(&mut output, &mut bytes, row, options)?;
+        }
+        return Ok(output);
+    }
     for (index, line) in logical.iter().enumerate() {
         if index != 0 {
             for _ in 0..options.line_spacing {
                 push_row(&mut output, &mut bytes, String::new(), options)?;
             }
         }
-        for row in render_line(line, options, color_enabled)? {
+        for row in render_line(line, options, color_enabled)?.rows {
             push_row(&mut output, &mut bytes, row, options)?;
         }
     }
@@ -248,25 +269,7 @@ impl LineLayout<'_> {
         self.top_height + self.baseline - style.font.metrics.baseline
     }
     fn border_char(&self, unit: &Unit, top: bool) -> String {
-        let explicit = if top {
-            &self.options.top_char
-        } else {
-            &self.options.bottom_char
-        };
-        let default = unit
-            .style
-            .font
-            .decorations
-            .border
-            .as_ref()
-            .map_or("░", |b| {
-                if top {
-                    b.top.as_str()
-                } else {
-                    b.bottom.as_str()
-                }
-            });
-        replace_border_ink(default, explicit.as_deref())
+        border_character(&unit.style, self.options, top)
     }
     fn spacer_cell(&self, owner: &Unit, row: usize) -> String {
         let glyph = owner.style.font.glyph(owner.ch);
@@ -330,7 +333,7 @@ fn append_spacer(
     Ok(())
 }
 
-fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<Vec<String>> {
+fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<RenderedLine> {
     let styles: Vec<&Style> = if line.units.is_empty() {
         vec![&line.empty_style]
     } else {
@@ -382,6 +385,10 @@ fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<Vec<Stri
         height,
     };
     let mut rows = vec![String::new(); height];
+    let mut rendered_width = if line.units.is_empty() { 0 } else { 2 };
+    if let Some((left, right)) = &sides {
+        rendered_width += left.width.unwrap() + right.width.unwrap();
+    }
     let mut line_bytes = 0;
     if let Some((left, _)) = &sides {
         let cap_rows = endcap_rows(
@@ -418,6 +425,7 @@ fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<Vec<Stri
         if spacing > 128 || width > 512 {
             return Err("spacing or glyph cell width exceeds limits".into());
         }
+        rendered_width += width + font.metrics.separator.width();
         let offset = layout.offset(style);
         let underline_row = font.decorations.underline.as_ref().map(|u| offset + u.row);
         let art = font.glyph_rows(glyph, style.underline);
@@ -465,6 +473,7 @@ fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<Vec<Stri
             )?;
         }
         if index + 1 < line.units.len() && !style.compact {
+            rendered_width += spacing;
             append_spacer(&mut rows, unit, spacing, &layout, colors, &mut line_bytes)?;
         }
     }
@@ -489,7 +498,168 @@ fn render_line(line: &LogicalLine, o: &Options, colors: bool) -> Result<Vec<Stri
             )?;
         }
     }
+    Ok(RenderedLine {
+        rows,
+        width: rendered_width,
+        top_height,
+        bottom_height,
+    })
+}
+// Compose interiors first, then put one frame around their shared rectangle.
+fn render_block(lines: &[LogicalLine], o: &Options, colors: bool) -> Result<Vec<String>> {
+    let left_style = lines
+        .iter()
+        .find_map(|l| l.units.first())
+        .map_or(&lines[0].empty_style, |u| &u.style);
+    let right_style = lines
+        .iter()
+        .rev()
+        .find_map(|l| l.units.last())
+        .map_or(&lines.last().unwrap().empty_style, |u| &u.style);
+    let sides = o.endcaps.then(|| {
+        (
+            font_endcap(&left_style.font, true),
+            font_endcap(&right_style.font, false),
+        )
+    });
+    let mut rendered = Vec::with_capacity(lines.len());
+    let mut width = 0;
+    let mut height = o.line_spacing * (lines.len() - 1);
+    let mut raw_bytes = 0;
+    for (index, line) in lines.iter().enumerate() {
+        let inner = Options {
+            endcaps: false,
+            top: o.top && index == 0,
+            bottom: o.bottom && index + 1 == lines.len(),
+            ..o.clone()
+        };
+        let part = render_line(line, &inner, colors)?;
+        width = width.max(part.width);
+        height += part.rows.len();
+        raw_bytes += part.rows.iter().map(String::len).sum::<usize>();
+        if raw_bytes > 64 * 1024 * 1024 {
+            return Err("rendered output exceeds 64 MiB".into());
+        }
+        rendered.push(part);
+    }
+    let top_height = rendered[0].top_height;
+    let bottom_height = rendered.last().unwrap().bottom_height;
+    let mut extra = 0;
+    let mut side_width = 0;
+    if let Some((left, right)) = &sides {
+        let required = endcap_top_height(left, top_height)
+            .max(endcap_top_height(right, top_height))
+            + endcap_bottom_height(left, bottom_height)
+                .max(endcap_bottom_height(right, bottom_height));
+        extra = required.saturating_sub(height);
+        height += extra;
+        side_width = left.width.unwrap() + right.width.unwrap();
+    }
+    // Check the rectangle before allocating padding for many short/blank lines.
+    let row_minimum = width + side_width + o.prefix.len() + o.suffix.len();
+    if row_minimum > 1024 * 1024 {
+        return Err("a rendered row exceeds 1 MiB".into());
+    }
+    if height
+        .checked_mul(row_minimum + 1)
+        .is_none_or(|n| n > 64 * 1024 * 1024)
+    {
+        return Err("rendered output exceeds 64 MiB".into());
+    }
+    let mut rows = Vec::with_capacity(height);
+    let mut bytes = raw_bytes;
+    for (index, part) in rendered.into_iter().enumerate() {
+        if index > 0 {
+            for _ in 0..o.line_spacing {
+                let mut gap = String::new();
+                append_piece(&mut gap, &" ".repeat(width), None, colors, &mut bytes)?;
+                rows.push(gap);
+            }
+        }
+        let part_height = part.rows.len();
+        for (row_index, mut row) in part.rows.into_iter().enumerate() {
+            let border = if row_index < part.top_height {
+                Some(true)
+            } else if row_index >= part_height - part.bottom_height {
+                Some(false)
+            } else {
+                None
+            };
+            let style = lines[index].last_style();
+            let (padding, color) = match border {
+                Some(top) => (border_character(style, o, top), style.color),
+                None => (" ".into(), None),
+            };
+            append_piece(
+                &mut row,
+                &padding.repeat(width - part.width),
+                color,
+                colors,
+                &mut bytes,
+            )?;
+            rows.push(row);
+        }
+    }
+    // Oversized corners add space around the whole block, not around each line.
+    for _ in 0..extra.div_ceil(2) {
+        rows.insert(top_height, " ".repeat(width));
+    }
+    for _ in 0..extra / 2 {
+        rows.insert(rows.len() - bottom_height, " ".repeat(width));
+    }
+    if let Some((left, right)) = sides {
+        let left_rows = endcap_rows(
+            &left,
+            height,
+            top_height,
+            bottom_height,
+            o.left_endcap_char.as_deref(),
+        );
+        let right_rows = endcap_rows(
+            &right,
+            height,
+            top_height,
+            bottom_height,
+            o.right_endcap_char.as_deref(),
+        );
+        let mut frame_bytes = 0;
+        for ((row, left), right) in rows.iter_mut().zip(left_rows).zip(right_rows) {
+            let mut framed = String::new();
+            append_piece(
+                &mut framed,
+                &left,
+                left_style.color,
+                colors,
+                &mut frame_bytes,
+            )?;
+            append_piece(&mut framed, row, None, colors, &mut frame_bytes)?;
+            append_piece(
+                &mut framed,
+                &right,
+                right_style.color,
+                colors,
+                &mut frame_bytes,
+            )?;
+            *row = framed;
+        }
+    }
     Ok(rows)
+}
+
+fn border_character(style: &Style, options: &Options, top: bool) -> String {
+    let explicit = if top {
+        &options.top_char
+    } else {
+        &options.bottom_char
+    };
+    let default = style.font.decorations.border.as_ref().map_or("░", |b| {
+        if top {
+            b.top.as_str()
+        } else {
+            b.bottom.as_str()
+        }
+    });
+    replace_border_ink(default, explicit.as_deref())
 }
 fn border_text(
     glyph: &Glyph,

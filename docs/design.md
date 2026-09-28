@@ -82,3 +82,25 @@ Explicit border characters now act as ink replacement masks: all non-space termi
 Basic and Tall use rounded shaded endcaps; Ultra uses the fancy block-art frame with `▀` above, `▄` below, and `█▀` / `█▄` endcaps. Their existing glyph and underline data is retained. Both examples contain a small shared repertoire for letter, digit, punctuation, descender, and width demonstrations, plus their fallback artwork. The ornate frame example retains the corresponding Ultra glyphs; Micro supplies its own three-row ASCII artwork and an additional Unicode sample. The C# glyph snapshot remains unchanged; endcap geometry and masking have their own regression tests.
 
 Endcap verification: 43 tests passed, including the original glyph snapshot checks. Formatting, Clippy with warnings denied, and the Linux release build passed. Full, top-only, and bottom-only Ultra/ornate examples were rendered and inspected.
+
+## Combined multiline borders
+
+`--combine-borders` / `--no-combine-borders` is invocation-wide, last-wins, and
+disabled by default. With a border enabled, multiple logical lines share a
+rectangle whose interior width is the widest line. Lines retain independent
+baseline alignment and formatting. Right padding and interline gaps are plain
+spaces, with no added underline. Line spacing remains explicit and defaults to
+one row inside the frame.
+
+Top artwork and default thickness belong to the first logical line; bottom
+artwork and thickness belong to the last. Horizontal extension uses that
+boundary line's last font/color, or its active style when empty. Side artwork
+and colors belong to the first and last actual characters across the block,
+falling back to the corresponding empty-line styles when all lines are empty.
+Top-only/bottom-only corners appear only at the corresponding block boundary.
+Oversized corners add space around the complete block. Single-line output and
+output without horizontal borders retain their existing behavior.
+
+The compositor tracks terminal columns independently of ANSI bytes, checks the
+padded rectangle against output limits before allocation, and applies wrappers
+only after the complete frame is composed.

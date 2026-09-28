@@ -269,3 +269,20 @@ fn endcaps_cli_supports_partial_frames_overrides_and_external_font_roundtrips() 
     let o = run(&["--left-endcap-char", "xx", "A"], "");
     assert!(!o.status.success() && o.stdout.is_empty());
 }
+
+#[test]
+fn combined_border_flags_are_global_last_wins_and_work_with_stdin() {
+    let base = ["--ultra", "-b", "--border-endcaps", "--line-spacing", "0"];
+    let mut combined = base.to_vec();
+    combined.push("--combine-borders");
+    let from_stdin = success(&combined, "bigtext\nrocks!");
+    combined.push("bigtext\\nrocks!");
+    assert_eq!(success(&combined, ""), from_stdin);
+    combined.push("--no-combine-borders");
+    let mut separate = base.to_vec();
+    separate.push("bigtext\\nrocks!");
+    assert_eq!(success(&combined, ""), success(&separate, ""));
+    combined.push("--combine-borders");
+    assert_eq!(success(&combined, ""), from_stdin);
+    assert_eq!(from_stdin.lines().count(), 16);
+}

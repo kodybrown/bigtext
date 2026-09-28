@@ -34,6 +34,7 @@ Global output settings (last setting wins for the complete output):
   --top-border-char CHAR         Override just the top border character
   --bottom-border-char CHAR      Override just the bottom border character
   --border-endcaps / --no-border-endcaps  Enable/disable font-defined side caps
+  --combine-borders / --no-combine-borders  Frame all logical lines as one block
   --endcap-char CHAR             Replace ink on both endcaps
   --left-endcap-char CHAR        Replace ink on the left endcap
   --right-endcap-char CHAR       Replace ink on the right endcap
@@ -234,6 +235,8 @@ pub fn parse(args: &[String]) -> Result<Action> {
             "--no-bottom-border" | "--no-border-bottom" => options.bottom = false,
             "--border-endcaps" => options.endcaps = true,
             "--no-border-endcaps" => options.endcaps = false,
+            "--combine-borders" => options.combine_borders = true,
+            "--no-combine-borders" => options.combine_borders = false,
             "--border-char" => {
                 let c = value()?;
                 font::check_cell(&c)?;

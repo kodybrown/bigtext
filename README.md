@@ -17,31 +17,6 @@ Compose large Unicode text with editable YAML fonts and formatting that changes 
 
 ```
 
-```sh
-λ cargo run -- --border --border-char '=' --basic 'hello ' \
-  --underline --tall W --no-underline 'orld!'
-=============================================
-                                           ▄
-                      █ █ █         █    █ █
- █    ▄  █  █         █ █ █ ▄▀▄ █▀▄ █  ▄▀█ █
- █▀▄ █▄█ █  █  ▄▀▄    █ █ █ █ █ █   █  █ █ █
- █ █ ▀▄▄ █▄ █▄ ▀▄▀    ▀▄▀▄▀ ▀▄▀ █   █▄ ▀▄█ ▄
-                      ▄▄▄▄▄▄
-=============================================
-
-λ bigtext --ultra -b "bigtext" --prefix "/* " --suffix " */"
-/* ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ */
-/*                                                    */
-/*  ██      ██           ██                     ██    */
-/*  ██▀▀▀█▄ ▄▄ ▄█▀▀▀█▄ ▀▀██▀▀ ▄█▀▀▀█▄ ▀█▄ ▄█▀ ▀▀██▀▀  */
-/*  ██   ██ ██ ██   ██   ██   ██▄▄▄██   ███     ██    */
-/*  ██   ██ ██ ██   ██   ██   ██       ██ ██    ██    */
-/*  ██████▀ ██ ▀██████   ██   ▀█████▀ ██   ██   ██    */
-/*              ▄▄▄▄█▀                                */
-/* ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ */
-
-```
-
 Basic, Tall, and Ultra are embedded in the executable. No font directory, C# runtime, or network connection is needed to run it. Each font contains 257 Unicode glyphs plus a fallback, adapted from the original C# artwork with separate underline variants.
 
 ## Build and run
@@ -96,6 +71,32 @@ bigtext --prefix '/* ' --suffix ' */' 'Section'
 By default, each glyph uses its own font's border characters, and spacers/padding use their owning character's defaults. Each line reserves the maximum border height required by its fonts (one row if unspecified). `--border-height` overrides the height. Character overrides replace non-space border artwork, including glyph-specific border rows, while preserving its spaces and width. Explicit glyph exceptions can still leave gaps in borders.
 
 `--no-border`, `--no-top-border`, and `--no-bottom-border` switch borders off globally. `--border-top` and `--border-bottom` are aliases. Wrappers apply to every emitted row, including interline gaps. Available shortcuts include `--slash-comment`, `--hash-comment`, `--tick-comment`, `--lua-comment`, `--block-comment`, and `--html-comment`; `--no-comment` clears both wrappers. Prefixes/suffixes are literal and are not escape-decoded.
+
+## Combining borders across lines
+
+`--combine-borders` puts all logical lines inside one bordered block. Separate
+frames remain the default; `--no-combine-borders` restores that behavior. These
+options are global and the last setting wins. They do not enable borders.
+
+```sh
+bigtext --ultra -b --border-endcaps --combine-borders --line-spacing 0 'bigtext\nrocks!'
+```
+
+The widest rendered line sets the interior width. Shorter lines stay left-aligned
+and receive plain spaces on the right; their underlines do not extend into that
+padding. Each line retains its own fonts, baseline, compact setting, and colors.
+`--line-spacing` adds blank rows **inside** the frame (default 1); use 0 for the
+example above. Blank rows in the font artwork remain intact.
+
+The first logical line supplies the top border artwork and thickness; the last
+supplies the bottom. When a boundary line is shorter, its last character's font
+extends that horizontal border (an empty line uses its active font). The first
+and last actual characters across the block supply the left and right endcaps
+and their colors. Character overrides still apply to their respective surfaces.
+Top-only and bottom-only modes draw only their outer corners, without repeating
+middle side artwork. Prefixes and suffixes wrap every final row outside the
+frame, including gap rows. With no borders, or only one logical line, rendering
+is unchanged.
 
 ## Border endcaps
 
@@ -191,3 +192,47 @@ Font parsing uses [serde_yaml_ng](https://docs.rs/serde_yaml_ng/latest/serde_yam
 The original C# and Rust projects remain separate. [tools/import_csharp.py](tools/import_csharp.py) records the artwork migration procedure; only regeneration requires .NET 10 and Python. Ordinary builds and execution use Rust alone.
 
 Wrapping, centering, gradients, animation, and an inline markup language are deferred. Formatting is expressed through ordered command-line options; text escapes only insert characters and line breaks.
+
+## Examples
+
+```sh
+λ cargo run -- --border --border-char '=' --basic 'hello ' --underline --tall W --no-underline 'orld!'
+=============================================
+                                           ▄
+                      █ █ █         █    █ █
+ █    ▄  █  █         █ █ █ ▄▀▄ █▀▄ █  ▄▀█ █
+ █▀▄ █▄█ █  █  ▄▀▄    █ █ █ █ █ █   █  █ █ █
+ █ █ ▀▄▄ █▄ █▄ ▀▄▀    ▀▄▀▄▀ ▀▄▀ █   █▄ ▀▄█ ▄
+                      ▄▄▄▄▄▄
+=============================================
+
+λ bigtext --ultra -b "bigtext" --prefix "/* " --suffix " */"
+/* ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ */
+/*                                                    */
+/*  ██      ██           ██                     ██    */
+/*  ██▀▀▀█▄ ▄▄ ▄█▀▀▀█▄ ▀▀██▀▀ ▄█▀▀▀█▄ ▀█▄ ▄█▀ ▀▀██▀▀  */
+/*  ██   ██ ██ ██   ██   ██   ██▄▄▄██   ███     ██    */
+/*  ██   ██ ██ ██   ██   ██   ██       ██ ██    ██    */
+/*  ██████▀ ██ ▀██████   ██   ▀█████▀ ██   ██   ██    */
+/*              ▄▄▄▄█▀                                */
+/* ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ */
+
+λ bigtext --font ultra -b "bigtext\nrocks!" --border-endcaps --combine-borders
+  █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
+ █▀                                                    ▀█
+█▀   ██      ██           ██                     ██     ▀█
+█    ██▀▀▀█▄ ▄▄ ▄█▀▀▀█▄ ▀▀██▀▀ ▄█▀▀▀█▄ ▀█▄ ▄█▀ ▀▀██▀▀    █
+█    ██   ██ ██ ██   ██   ██   ██▄▄▄██   ███     ██      █
+█    ██   ██ ██ ██   ██   ██   ██       ██ ██    ██      █
+█    ██████▀ ██ ▀██████   ██   ▀█████▀ ██   ██   ██      █
+█                ▄▄▄▄█▀                                  █
+█                                          ▄▄            █
+█                          ██              ██            █
+█    ▄█▀▀▀ ▄█▀▀▀█▄ ▄█▀▀▀▄█ ██  ▄▀  ▄█▀▀▀█▄ ██            █
+█    ██    ██   ██ ██      ██▄█▄   ▀█▄▄▄▄  ██            █
+█    ██    ██   ██ ██   ▄▄ ██  ██       ██               █
+█▄   ██    ▀█████▀ ▀█████▀ ██   ██ ▀█████▀ ██           ▄█
+ █▄                                                    ▄█
+  █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
+
+```
