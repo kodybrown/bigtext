@@ -1,4 +1,7 @@
 
+# Personal notes
+notes.mdx
+
 # Specifies where to dump the target directory
 .cargo/config.toml
 
