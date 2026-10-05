@@ -1,6 +1,7 @@
 
 # Personal notes
 notes.mdx
+font-ideas.txt
 
 # Specifies where to dump the target directory
 .cargo/config.toml
